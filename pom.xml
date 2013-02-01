@@ -13,6 +13,7 @@
         <module>echo</module>
         <module>map</module>
         <module>quakes</module>
+        <module>util</module>
     </modules>
 
     <properties>

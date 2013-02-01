@@ -3,3 +3,5 @@
 /quakes/target/
 /quakes/alerts/
 /quakes/feedcache/
+/util/target/
+/echo/feedcache/

@@ -6,12 +6,12 @@ import com.sun.syndication.io.FeedException;
 import static ed3.demo.quakes.Alert.APPLICATION_CAP_XML;
 import static ed3.demo.quakes.SAMECodes.EARTHQUAKE_WARNING;
 import static ed3.demo.quakes.SAMECodes.SAME;
+import ed3.demo.util.FeedFetching;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
-import java.util.TimeZone;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientFactory;
 import javax.ws.rs.client.Entity;
@@ -20,8 +20,6 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import org.rometools.fetcher.FeedFetcher;
 import org.rometools.fetcher.FetcherException;
-import org.rometools.fetcher.impl.DiskFeedInfoCache;
-import org.rometools.fetcher.impl.HttpURLFeedFetcher;
 
 public class FetchAndGenerate {
 
@@ -29,19 +27,14 @@ public class FetchAndGenerate {
     public static final String FEED_LOCATION = "http://earthquake.usgs.gov/earthquakes/feed/atom/1.0/hour";
 
     public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FetcherException, FeedException {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-        File cwd = new File(".");
-        File feedCacheDir = ensureDirectoryExists(cwd, "feedcache", "feed cache");
-        File alertsDir = ensureDirectoryExists(cwd, "alerts", "alerts");
-        String cachePath = feedCacheDir.getPath();
-        DiskFeedInfoCache feedInfoCache = new DiskFeedInfoCache(cachePath);
-        FeedFetcher fetcher = new HttpURLFeedFetcher(feedInfoCache);
+        FeedFetcher fetcher = FeedFetching.newCachingFeedFetcher();
         SyndFeed feed = fetcher.retrieveFeed(new URL(FEED_LOCATION));
         System.out.println(feed);
         List<SyndEntryImpl> entries = feed.getEntries();
         Client client = ClientFactory.newClient();
         WebTarget target = client.target(CAP_CONSUMER_LOCATION);
         AlertBuilder builder = new AlertBuilder();
+        File alertsDir = FeedFetching.ensureDirectoryExists("alerts", "alerts");
         for (SyndEntryImpl entry : entries) {
             Alert alert = builder.build(entry);
             alert.setSender("USGS");
@@ -68,13 +61,5 @@ public class FetchAndGenerate {
             System.out.println(response.readEntity(String.class));
             response.close();
         }
-    }
-
-    private static File ensureDirectoryExists(File parentDir, String dirName, String dirDescription) throws IOException {
-        File dir = new File(parentDir, dirName);
-        if (!dir.isDirectory() && !dir.mkdir()) {
-            throw new IOException(String.format("could not create %3$s directory \"%2$s\" under parent \"%1$s\"", parentDir, dirName, dirDescription));
-        }
-        return dir;
     }
 }

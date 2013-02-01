@@ -7,6 +7,7 @@ import static ed3.demo.quakes.Alert.APPLICATION_CAP_XML;
 import static ed3.demo.quakes.SAMECodes.EARTHQUAKE_WARNING;
 import static ed3.demo.quakes.SAMECodes.SAME;
 import ed3.demo.util.FeedFetching;
+import ed3.demo.util.Misc;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -34,7 +35,7 @@ public class FetchAndGenerate {
         Client client = ClientFactory.newClient();
         WebTarget target = client.target(CAP_CONSUMER_LOCATION);
         AlertBuilder builder = new AlertBuilder();
-        File alertsDir = FeedFetching.ensureDirectoryExists("alerts", "alerts");
+        File alertsDir = Misc.ensureDirectoryExists("alerts", "alerts");
         for (SyndEntryImpl entry : entries) {
             Alert alert = builder.build(entry);
             alert.setSender("USGS");

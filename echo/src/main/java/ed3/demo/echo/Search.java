@@ -11,37 +11,88 @@ import com.sun.syndication.io.FeedException;
 import ed3.demo.util.FeedFetching;
 import ed3.demo.util.Misc;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Calendar;
+import javax.ws.rs.MessageProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientException;
+import javax.ws.rs.client.ClientFactory;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Response;
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.bind.JAXB;
 import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
 import org.rometools.fetcher.FeedFetcher;
 import org.rometools.fetcher.FetcherException;
+import org.rometools.fetcher.impl.HttpURLFeedFetcher;
 
 public class Search {
 
   private ObjectBean _objBean;
 
-  public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException, DatatypeConfigurationException {
+  public static void main(String[] args) throws DatatypeConfigurationException, MalformedURLException, IOException, IllegalArgumentException, FeedException, FetcherException {
     Misc.switchToGMT();
+    String datasetId = "MODIS";
+    String workflowEndpoint = "http://ed3test.itsc.uah.edu:80/ed3/dataservices/doworkflow.php";
+    Work work = fetchWork(workflowEndpoint, datasetId);
+    System.out.println(work);
+    System.out.println("-----------------------");
+    /*
+     File cacheDir = Misc.ensureDirectoryExists("workcache", "work cache");
+     ResourceFactory resourceFactory = new FileResourceFactory(cacheDir);
+     CacheConfig config = new CacheConfig();
+     HttpCacheStorage storage = new ManagedHttpCacheStorage(config);
+     HttpClient cachingClient = new CachingHttpClient(client, resourceFactory, storage, config);
+     HttpGet workflowGet = new HttpGet();
+     workflowGet.HttpResponse aWorkflow = cachingClient.execute(workflowGet);
+     method.setQueryString(params);
+     int responseCode = work.executeMethod(method);
+     */
+    final String echoEndpoint = "https://api.echo.nasa.gov/echo-esip/search/granule.atom";
+    final String myClientId = "mmceniry@itsc.uah.edu";
+    final String dsShortName = "MOD02QKM";
+    final String dsVersionId = "5";
+    final String dsDataCenter = "LAADS";
+    SyndFeed feed = askEcho(echoEndpoint, myClientId, dsShortName, dsVersionId, dsDataCenter, work);
+    System.out.println(feed);
+  }
+
+  public static Work fetchWork(String workflowEndpoint, String datasetId) throws ClientException, MessageProcessingException, IllegalArgumentException, NullPointerException, IllegalStateException {
+    Client client = ClientFactory.newClient();
+    WebTarget target = client.target(workflowEndpoint);
+    Builder request = target.queryParam("ds", datasetId).request();
+    Response response = request.get();
+    System.out.println(String.format("%3d %s", response.getStatus(), response.getStatusInfo()));
+    String entity = response.readEntity(String.class);
+    response.close();
+    System.out.println(entity);
+    System.out.println("-----------------------");
+    Work work = JAXB.unmarshal(new StringReader(entity), Work.class);
+    return work;
+  }
+
+  public static SyndFeed askEcho(final String echoEndpoint, final String myClientId, final String dsShortName, final String dsVersionId, final String dsDataCenter, Work work) throws IllegalArgumentException, MalformedURLException, FeedException, FetcherException, IOException {
     Search search = new Search();
-    search.base = "https://api.echo.nasa.gov/echo-esip/search/granule.atom";
-    search.clientId = "mmceniry@itsc.uah.edu";
-    search.shortName = "MOD02QKM";
-    search.versionId = "5";
-    search.dataCenter = "LAADS";
-    search.point = new Point(new Position(36.311, -120.8555));
-    search.startTime = DatatypeFactory.newInstance().newXMLGregorianCalendar("2013-01-28");
+    search.base = echoEndpoint;
+    search.clientId = myClientId;
+    search.shortName = dsShortName;
+    search.versionId = dsVersionId;
+    search.dataCenter = dsDataCenter;
+    search.point = new Point(new Position(work.latitude, work.longitude));
+    search.startTime = work.getStartTime();
+    search.endTime = work.getEndTime();
     search.numberOfResults = 10;
     search.cursor = 0;
     System.out.println(search);
     URL feedUrl = search.getUrl();
     System.out.println(feedUrl);
-    FeedFetcher fetcher = FeedFetching.newCachingFeedFetcher();
+    FeedFetcher fetcher = new HttpURLFeedFetcher();
     SyndFeed feed = fetcher.retrieveFeed(feedUrl);
-    System.out.println(feed);
+    return feed;
   }
   private String base;
   private String shortName;
@@ -51,8 +102,8 @@ public class Search {
   private Polygon polygon;
   private LineString line;
   private Point point;
-  private XMLGregorianCalendar startTime;
-  private XMLGregorianCalendar endTime;
+  private Calendar startTime;
+  private Calendar endTime;
   private int cursor;
   private int numberOfResults;
   private String clientId;
@@ -99,11 +150,11 @@ public class Search {
     return point;
   }
 
-  public XMLGregorianCalendar getStartTime() {
+  public Calendar getStartTime() {
     return startTime;
   }
 
-  public XMLGregorianCalendar getEndTime() {
+  public Calendar getEndTime() {
     return endTime;
   }
 
@@ -144,7 +195,7 @@ public class Search {
   }
 
   private String join(double a, double b) {
-    return "" + a + "," + b;
+    return a + "," + b;
   }
 
   private String join(Position position) {
@@ -191,10 +242,10 @@ public class Search {
     return s;
   }
 
-  private String formatQueryParameter(String queryParameterName, XMLGregorianCalendar value) {
+  private String formatQueryParameter(String queryParameterName, Calendar value) {
     String s = "";
     if (value != null) {
-      s = formatQueryParameter(queryParameterName, value.toXMLFormat());
+      s = formatQueryParameter(queryParameterName, DatatypeConverter.printDateTime(value));
     }
     return s;
   }

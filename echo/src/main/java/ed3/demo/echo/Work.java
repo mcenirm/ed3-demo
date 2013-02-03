@@ -10,7 +10,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Work {
 
-  public int id;
+  public String id;
   public double latitude;
   public double longitude;
   public double spatial_buffer;

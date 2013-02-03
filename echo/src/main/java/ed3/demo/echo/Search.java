@@ -6,22 +6,28 @@ import com.sun.syndication.feed.module.georss.geometries.LineString;
 import com.sun.syndication.feed.module.georss.geometries.Point;
 import com.sun.syndication.feed.module.georss.geometries.Polygon;
 import com.sun.syndication.feed.module.georss.geometries.Position;
+import com.sun.syndication.feed.synd.SyndEntry;
 import com.sun.syndication.feed.synd.SyndFeed;
+import com.sun.syndication.feed.synd.SyndLink;
 import com.sun.syndication.io.FeedException;
-import ed3.demo.util.FeedFetching;
 import ed3.demo.util.Misc;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import javax.ws.rs.MessageProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientException;
 import javax.ws.rs.client.ClientFactory;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Form;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.bind.JAXB;
@@ -36,29 +42,21 @@ public class Search {
 
   public static void main(String[] args) throws DatatypeConfigurationException, MalformedURLException, IOException, IllegalArgumentException, FeedException, FetcherException {
     Misc.switchToGMT();
-    String datasetId = "MODIS";
-    String workflowEndpoint = "http://ed3test.itsc.uah.edu:80/ed3/dataservices/doworkflow.php";
+    final String datasetId = "MODIS";
+    final String workflowEndpoint = "http://ed3test.itsc.uah.edu:80/ed3/dataservices/doworkflow.php";
     Work work = fetchWork(workflowEndpoint, datasetId);
     System.out.println(work);
     System.out.println("-----------------------");
-    /*
-     File cacheDir = Misc.ensureDirectoryExists("workcache", "work cache");
-     ResourceFactory resourceFactory = new FileResourceFactory(cacheDir);
-     CacheConfig config = new CacheConfig();
-     HttpCacheStorage storage = new ManagedHttpCacheStorage(config);
-     HttpClient cachingClient = new CachingHttpClient(client, resourceFactory, storage, config);
-     HttpGet workflowGet = new HttpGet();
-     workflowGet.HttpResponse aWorkflow = cachingClient.execute(workflowGet);
-     method.setQueryString(params);
-     int responseCode = work.executeMethod(method);
-     */
     final String echoEndpoint = "https://api.echo.nasa.gov/echo-esip/search/granule.atom";
     final String myClientId = "mmceniry@itsc.uah.edu";
     final String dsShortName = "MOD02QKM";
     final String dsVersionId = "5";
     final String dsDataCenter = "LAADS";
-    SyndFeed feed = askEcho(echoEndpoint, myClientId, dsShortName, dsVersionId, dsDataCenter, work);
-    System.out.println(feed);
+    List<String> urls = askEcho(echoEndpoint, myClientId, dsShortName, dsVersionId, dsDataCenter, work);
+    System.out.println(urls);
+    System.out.println("-----------------------");
+    String message = updateWork(workflowEndpoint, datasetId, work, urls);
+    System.out.println(message);
   }
 
   public static Work fetchWork(String workflowEndpoint, String datasetId) throws ClientException, MessageProcessingException, IllegalArgumentException, NullPointerException, IllegalStateException {
@@ -75,7 +73,7 @@ public class Search {
     return work;
   }
 
-  public static SyndFeed askEcho(final String echoEndpoint, final String myClientId, final String dsShortName, final String dsVersionId, final String dsDataCenter, Work work) throws IllegalArgumentException, MalformedURLException, FeedException, FetcherException, IOException {
+  public static List<String> askEcho(final String echoEndpoint, final String myClientId, final String dsShortName, final String dsVersionId, final String dsDataCenter, Work work) throws IllegalArgumentException, MalformedURLException, FeedException, FetcherException, IOException {
     Search search = new Search();
     search.base = echoEndpoint;
     search.clientId = myClientId;
@@ -92,7 +90,42 @@ public class Search {
     System.out.println(feedUrl);
     FeedFetcher fetcher = new HttpURLFeedFetcher();
     SyndFeed feed = fetcher.retrieveFeed(feedUrl);
-    return feed;
+    List<SyndEntry> entries = feed.getEntries();
+    List<String> urls = new ArrayList<>();
+    for (SyndEntry entry : entries) {
+      System.out.println(String.format("%s [%s]", entry.getTitle(), entry.getUri()));
+      List<SyndLink> links = entry.getLinks();
+      for (SyndLink link : links) {
+        System.out.println(link);
+        String href = link.getHref();
+        if (href != null) {
+          urls.add(href);
+        }
+      }
+    }
+    return urls;
+  }
+
+  public static String updateWork(final String workflowEndpoint, final String datasetId, Work work, List<String> urls) throws MessageProcessingException, IllegalStateException, NullPointerException, IllegalArgumentException, ClientException {
+    Client client = ClientFactory.newClient();
+    WebTarget target = client.target(workflowEndpoint);
+    Builder request = target.request(MediaType.TEXT_PLAIN_TYPE);
+    Form form = new Form()
+            .param("ds", datasetId)
+            .param("action", "update")
+            .param("id", work.id)
+            .param("status", "groovy");
+    int n = 0;
+    for (String url : urls) {
+      form.param("url" + n, url);
+      n++;
+    }
+    System.out.println(form);
+    Entity<Form> entity = Entity.form(form);
+    Response response = request.post(entity);
+    System.out.println(String.format("%3d %s", response.getStatus(), response.getStatusInfo()));
+    String message = response.readEntity(String.class);
+    return message;
   }
   private String base;
   private String shortName;

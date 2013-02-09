@@ -27,32 +27,33 @@ public class Search {
 
   private ObjectBean _objBean;
 
-  public static void main(String[] args) throws IOException, MalformedURLException, IllegalArgumentException, FetcherException, FeedException {
+  public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     Misc.switchToGMT();
-    final String workflowEndpoint = "http://ed3test.itsc.uah.edu:80/ed3/dataservices/doworkflow.php";
-    final String echoEndpoint = "https://api.echo.nasa.gov/echo-esip/search/granule.atom";
-    Dataset dataset = new Dataset();
-    dataset.ed3id = "MODIS";
-    dataset.title = "MODIS";
-    dataset.echoShortName = "MOD02QKM";
-    dataset.echoVersionId = "5";
-    dataset.echoDataCenter = "LAADS";
-    Datasets datasets = new Datasets();
-    datasets.datasetList.add(dataset);
-    ReadyToWork rtw = new ReadyToWork();
-    rtw.datasets = datasets;
-    rtw.workflowEndpoint = workflowEndpoint;
-    rtw.echoEndpoint = echoEndpoint;
-    rtw.workDataset(dataset.ed3id);
-    Work work = rtw.fetchWork(dataset.ed3id);
+    WorkConfiguration config = new WorkConfiguration();
+    Datasets datasets = Datasets.loadDatasets();
+    String datasetId = "MOD02QKM";
+    Dataset dataset = datasets.findDataset(datasetId);
+    if (dataset == null) {
+      System.out.println("could not find dataset \"" + datasetId + "\"");
+      return;
+    }
+    Work work = new Work();
+    work.id = dataset.ed3id;
+    work.latitude = 34.73;
+    work.longitude = -86.585;
+    work.spatial_buffer = 100;
+    work.temporal_post = 1;
+    work.temporal_pre = 1;
+    work.ts = "2013-02-01 12:00:00";
     System.out.println(work);
     System.out.println("-----------------------");
-    final String myClientId = "mmceniry@itsc.uah.edu";
-    List<String> urls = rtw.askEcho(rtw.echoEndpoint, myClientId, dataset.echoShortName, dataset.echoVersionId, dataset.echoDataCenter, work);
-    System.out.println(urls);
+    Search search = new Search();
+    search.apply(config).apply(dataset).apply(work);
+    List<String> urls = search.search();
+    for (String url : urls) {
+      System.out.println(url);
+    }
     System.out.println("-----------------------");
-    String message = rtw.updateWork(workflowEndpoint, dataset.ed3id, work, urls);
-    System.out.println(message);
   }
   public String base;
   public String shortName;
@@ -71,9 +72,31 @@ public class Search {
 
   public Search() {
     _objBean = new ObjectBean(Search.class, this);
+    cursor = 0;
+    numberOfResults = 10;
   }
 
-  public List<String> search() throws MalformedURLException, IOException, IllegalArgumentException, FetcherException, FeedException {
+  public Search apply(WorkConfiguration config) {
+    base = config.echoEndpoint;
+    clientId = config.echoClientId;
+    return this;
+  }
+
+  public Search apply(Dataset dataset) {
+    shortName = dataset.echoShortName;
+    versionId = dataset.echoVersionId;
+    dataCenter = dataset.echoDataCenter;
+    return this;
+  }
+
+  public Search apply(Work work) {
+    point = new Point(new Position(work.latitude, work.longitude));
+    startTime = work.getStartTime();
+    endTime = work.getEndTime();
+    return this;
+  }
+
+  public List<String> search() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     URL feedUrl = getUrl();
     System.out.println(feedUrl);
     FeedFetcher fetcher = new HttpURLFeedFetcher();

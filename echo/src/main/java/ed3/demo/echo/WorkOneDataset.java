@@ -16,6 +16,8 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.StatusType;
+import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXB;
 import org.rometools.fetcher.FetcherException;
 
@@ -58,17 +60,30 @@ public class WorkOneDataset {
     WebTarget target = client.target(config.workflowEndpoint);
     Builder request = target.queryParam("ds", datasetId).request();
     Response response = request.get();
+    int status = response.getStatus();
+    StatusType statusInfo = response.getStatusInfo();
     String entity = response.readEntity(String.class);
     response.close();
-    if (response.getStatus() != 200) {
+    if (status != 200) {
+      System.out.println(target.getUri());
+      System.out.println(String.format("%3d %s", status, statusInfo));
+      System.out.println(entity);
+      System.out.println("-----------------------");
+      return null;
+    }
+    if (entity.contains("<root><0>-1</0></root>")) {
+      return null;
+    }
+    try {
+      return JAXB.unmarshal(new StringReader(entity), Work.class);
+    } catch (DataBindingException e) {
+      System.out.println(e.getLocalizedMessage());
       System.out.println(target.getUri());
       System.out.println(String.format("%3d %s", response.getStatus(), response.getStatusInfo()));
       System.out.println(entity);
       System.out.println("-----------------------");
       return null;
     }
-    Work work = JAXB.unmarshal(new StringReader(entity), Work.class);
-    return work;
   }
 
   public List<String> askEcho(Work work) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {

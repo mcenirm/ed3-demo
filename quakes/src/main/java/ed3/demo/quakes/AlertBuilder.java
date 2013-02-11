@@ -1,33 +1,33 @@
 package ed3.demo.quakes;
 
 import com.sun.syndication.feed.module.georss.GeoRSSModule;
+import com.sun.syndication.feed.module.georss.geometries.AbstractGeometry;
+import com.sun.syndication.feed.module.georss.geometries.Point;
 import com.sun.syndication.feed.module.georss.geometries.Position;
-import com.sun.syndication.feed.synd.SyndEntryImpl;
-import com.sun.syndication.feed.synd.SyndLinkImpl;
-import java.util.List;
+import com.sun.syndication.feed.synd.SyndEntry;
 
 public class AlertBuilder {
 
-    Alert build(SyndEntryImpl entry) {
-        Alert alert = new Alert();
-        alert.setIdentifier(entry.getUri());
-        alert.setSent(entry.getUpdatedDate());
-        alert.setInfoWeb(entry.getLink());
-        List<SyndLinkImpl> links = entry.getLinks();
-        for (SyndLinkImpl link : links) {
-            System.out.println("--- SyndLinkImpl ---");
-            System.out.println(link);
-        }
-        alert.setInfoHeadline(entry.getTitle());
-        alert.setInfoDescription(entry.getDescription().getValue());
-        alert.setPublishedDate(entry.getPublishedDate());
-        GeoRSSModule georss = (GeoRSSModule) entry.getModule(GeoRSSModule.GEORSS_GEORSS_URI);
-        Position position = georss.getPosition();
-        double latitude = position.getLatitude();
-        double longitude = position.getLongitude();
-        alert.setInfoAreaPoint(latitude, longitude);
-        return alert;
+  Alert build(SyndEntry entry) {
+    Alert alert = new Alert();
+    alert.setIdentifier(entry.getUri());
+    alert.setSent(entry.getUpdatedDate());
+    alert.setInfoWeb(entry.getLink());
+    alert.setInfoHeadline(entry.getTitle());
+    alert.setInfoDescription(entry.getDescription().getValue());
+    GeoRSSModule georss = (GeoRSSModule) entry.getModule(GeoRSSModule.GEORSS_GEORSS_URI);
+    AbstractGeometry geometry = georss.getGeometry();
+    if (geometry instanceof Point) {
+      Point point = (Point) geometry;
+      Position position = point.getPosition();
+      double latitude = position.getLatitude();
+      double longitude = position.getLongitude();
+      alert.setInfoAreaPoint(latitude, longitude);
+    } else {
+      System.out.println("unexpected geometry (" + geometry.getClass() + ") for entry " + entry.getUri());
     }
+    return alert;
+  }
 }
 /*
  SyndEntryImpl.description.type=html

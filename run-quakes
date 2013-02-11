@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -e
+
+cd $HOME/ed3/ed3-demo/quakes/
+
+$HOME/sw/jdk/bin/java -cp target/dependency/\*:target/ed3-demo-quakes-1.0-SNAPSHOT.jar ed3.demo.quakes.FetchAndGenerate
+

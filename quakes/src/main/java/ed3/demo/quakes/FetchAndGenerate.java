@@ -20,6 +20,7 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.StatusType;
 import javax.xml.bind.JAXB;
 import org.rometools.fetcher.FeedFetcher;
 import org.rometools.fetcher.FetcherException;
@@ -32,7 +33,6 @@ public class FetchAndGenerate {
   public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FetcherException, FeedException {
     FeedFetcher fetcher = FeedFetching.newCachingFeedFetcher();
     SyndFeed feed = fetcher.retrieveFeed(new URL(FEED_LOCATION));
-    System.out.println(feed);
     List<SyndEntry> entries = feed.getEntries();
     Client client = ClientFactory.newClient();
     WebTarget target = client.target(CAP_CONSUMER_LOCATION);
@@ -67,15 +67,19 @@ public class FetchAndGenerate {
       int lastIndexOf = link.lastIndexOf('/');
       String substring = link.substring(lastIndexOf + 1);
       File alertFile = new File(alertsDir, substring + ".xml");
-      System.out.println(alertFile);
       JAXB.marshal(alert, alertFile);
       Builder request = target.request();
       Entity<Alert> entity = Entity.entity(alert, APPLICATION_CAP_XML);
       Response response = request.post(entity);
-      System.out.println(response.getStatus());
-      System.out.println(response.getStatusInfo());
-      System.out.println(response.readEntity(String.class));
+      final int status = response.getStatus();
+      final StatusType statusInfo = response.getStatusInfo();
+      final String message = response.readEntity(String.class);
       response.close();
+      if (status != 200) {
+        System.out.println(status);
+        System.out.println(statusInfo);
+        System.out.println(message);
+      }
     }
   }
 }

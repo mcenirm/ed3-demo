@@ -44,14 +44,14 @@ public class WorkOneDataset {
     Work work;
     while ((work = fetchWork(dataset.ed3id)) != null && !seenWork.contains(work.id)) {
       seenWork.add(work.id);
-      System.out.println(dataset.ed3id + " " + work.id);
-      List<String> urls = askEcho(work);
-      for (String url : urls) {
-        System.out.println(url);
+      if ("NEW".equalsIgnoreCase(work.status)) {
+        List<String> urls = askEcho(work);
+        updateWork(work, urls);
+      } else if ("CLOSED".equalsIgnoreCase(work.status)) {
+        // PASS
+      } else {
+        System.out.println(dataset.ed3id + " " + work.id + " " + work.status);
       }
-      String message = updateWork(work, urls);
-      System.out.println(message);
-      System.out.println("-----------------------");
     }
   }
 
@@ -93,22 +93,28 @@ public class WorkOneDataset {
     return urls;
   }
 
-  public String updateWork(Work work, List<String> urls) {
+  public void updateWork(Work work, List<String> urls) {
     Client client = ClientFactory.newClient();
     WebTarget target = client.target(config.workflowEndpoint);
     Builder request = target.request(MediaType.TEXT_PLAIN_TYPE);
-    Form form = new Form().param("ds", dataset.ed3id).param("action", "update").param("id", work.id).param("status", "groovy");
-    int n = 0;
-    for (String url : urls) {
-      form.param("url" + n, url);
-      n++;
+    Form form = new Form().param("ds", dataset.ed3id).param("action", "update").param("id", work.id).param("status", work.status);
+    if (urls != null) {
+      int n = 0;
+      for (String url : urls) {
+        form.param("url" + n, url);
+        n++;
+      }
     }
     Entity<Form> entity = Entity.form(form);
     Response response = request.post(entity);
-    String message = response.readEntity(String.class);
-    if (response.getStatus() != 200) {
-      System.out.println(String.format("%3d %s", response.getStatus(), response.getStatusInfo()));
+    final int status = response.getStatus();
+    final StatusType statusInfo = response.getStatusInfo();
+    final String message = response.readEntity(String.class);
+    response.close();
+    if (status != 200) {
+      System.out.println(String.format("%3d %s", status, statusInfo));
+      System.out.println(message);
+      System.out.println("-----------------------");
     }
-    return message;
   }
 }

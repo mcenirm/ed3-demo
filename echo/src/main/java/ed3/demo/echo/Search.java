@@ -98,16 +98,13 @@ public class Search {
 
   public List<String> search() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     URL feedUrl = getUrl();
-    System.out.println(feedUrl);
     FeedFetcher fetcher = new HttpURLFeedFetcher();
     SyndFeed feed = fetcher.retrieveFeed(feedUrl);
     List<SyndEntry> entries = feed.getEntries();
     List<String> urls = new ArrayList<>();
     for (SyndEntry entry : entries) {
-      System.out.println(String.format("%s [%s]", entry.getTitle(), entry.getUri()));
       List<SyndLink> links = entry.getLinks();
       for (SyndLink link : links) {
-        System.out.println(link);
         String href = link.getHref();
         if (href != null) {
           urls.add(href);

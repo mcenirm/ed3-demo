@@ -17,6 +17,7 @@ public class Work {
   public String ts;
   public int temporal_pre;
   public int temporal_post;
+  public String status;
 
   @Override
   public String toString() {
@@ -29,6 +30,7 @@ public class Work {
     sb.append(prefix).append("ts=").append(ts).append("\n");
     sb.append(prefix).append("temporal_pre=").append(temporal_pre).append("\n");
     sb.append(prefix).append("temporal_post=").append(temporal_post).append("\n");
+    sb.append(prefix).append("status=").append(status).append("\n");
     return sb.toString();
   }
 

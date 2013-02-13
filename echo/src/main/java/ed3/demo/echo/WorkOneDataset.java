@@ -5,7 +5,6 @@ import ed3.demo.util.Misc;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.MalformedURLException;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.ws.rs.client.Client;
@@ -42,12 +41,12 @@ public class WorkOneDataset {
   public void work() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     Set<String> seenWork = new TreeSet<>();
     Work work;
-    while ((work = fetchWork(dataset.ed3id)) != null && !seenWork.contains(work.id)) {
+    while ((work = fetchWork()) != null && !seenWork.contains(work.id)) {
       seenWork.add(work.id);
-      if ("NEW".equalsIgnoreCase(work.status)) {
-        List<String> urls = askEcho(work);
-        updateWork(work, urls);
-      } else if ("CLOSED".equalsIgnoreCase(work.status)) {
+      if (Work.NEW.equalsIgnoreCase(work.status)) {
+        askEcho(work);
+        updateWork(work);
+      } else if (Work.CLOSED.equalsIgnoreCase(work.status)) {
         // PASS
       } else {
         System.out.println(dataset.ed3id + " " + work.id + " " + work.status);
@@ -55,10 +54,10 @@ public class WorkOneDataset {
     }
   }
 
-  public Work fetchWork(String datasetId) {
+  public Work fetchWork() {
     Client client = ClientFactory.newClient();
     WebTarget target = client.target(config.workflowEndpoint);
-    Builder request = target.queryParam("ds", datasetId).request();
+    Builder request = target.queryParam("ds", dataset.ed3id).request();
     Response response = request.get();
     int status = response.getStatus();
     StatusType statusInfo = response.getStatusInfo();
@@ -75,7 +74,9 @@ public class WorkOneDataset {
       return null;
     }
     try {
-      return JAXB.unmarshal(new StringReader(entity), Work.class);
+      final Work work = JAXB.unmarshal(new StringReader(entity), Work.class);
+      work.dataset = dataset;
+      return work;
     } catch (DataBindingException e) {
       System.out.println(e.getLocalizedMessage());
       System.out.println(target.getUri());
@@ -86,21 +87,21 @@ public class WorkOneDataset {
     }
   }
 
-  public List<String> askEcho(Work work) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
+  public void askEcho(Work work) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     Search search = new Search();
-    search.apply(config).apply(dataset).apply(work);
-    List<String> urls = search.search();
-    return urls;
+    search.config = config;
+    search.setWork(work);
+    search.search();
   }
 
-  public void updateWork(Work work, List<String> urls) {
+  public void updateWork(Work work) {
     Client client = ClientFactory.newClient();
     WebTarget target = client.target(config.workflowEndpoint);
     Builder request = target.request(MediaType.TEXT_PLAIN_TYPE);
     Form form = new Form().param("ds", dataset.ed3id).param("action", "update").param("id", work.id).param("status", work.status);
-    if (urls != null) {
+    if (work.urls != null) {
       int n = 0;
-      for (String url : urls) {
+      for (String url : work.urls) {
         form.param("url" + n, url);
         n++;
       }

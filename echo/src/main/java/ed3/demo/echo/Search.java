@@ -17,6 +17,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.List;
 import javax.xml.bind.DatatypeConverter;
 import org.rometools.fetcher.FeedFetcher;
@@ -38,7 +39,8 @@ public class Search {
       return;
     }
     Work work = new Work();
-    work.id = dataset.ed3id;
+    work.id = "example";
+    work.dataset = dataset;
     work.latitude = 34.73;
     work.longitude = -86.585;
     work.spatial_buffer = 100;
@@ -48,70 +50,72 @@ public class Search {
     System.out.println(work);
     System.out.println("-----------------------");
     Search search = new Search();
-    search.apply(config).apply(dataset).apply(work);
-    List<String> urls = search.search();
-    for (String url : urls) {
+    search.config = config;
+    search.setWork(work);
+    System.out.println(search.getUrl());
+    search.search();
+    for (String url : work.urls) {
       System.out.println(url);
     }
+    System.out.println(work.status);
     System.out.println("-----------------------");
   }
-  public String base;
-  public String shortName;
-  public String versionId;
-  public String dataCenter;
+  public WorkConfiguration config;
+  private Work work;
   private Envelope boundingBox;
   private Polygon polygon;
   private LineString line;
-  public Point point;
-  public Calendar startTime;
-  public Calendar endTime;
-  public int cursor;
-  public int numberOfResults;
-  public String clientId;
+  private int cursor;
+  private int numberOfResults;
   private String spatialType;
 
   public Search() {
     _objBean = new ObjectBean(Search.class, this);
-    cursor = 0;
+    cursor = 1;
     numberOfResults = 10;
   }
 
-  public Search apply(WorkConfiguration config) {
-    base = config.echoEndpoint;
-    clientId = config.echoClientId;
-    return this;
+  public Work getWork() {
+    return work;
   }
 
-  public Search apply(Dataset dataset) {
-    shortName = dataset.echoShortName;
-    versionId = dataset.echoVersionId;
-    dataCenter = dataset.echoDataCenter;
-    return this;
+  public void setWork(Work work) {
+    this.work = work;
   }
 
-  public Search apply(Work work) {
-    point = new Point(new Position(work.latitude, work.longitude));
-    startTime = work.getStartTime();
-    endTime = work.getEndTime();
-    return this;
-  }
-
-  public List<String> search() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
-    URL feedUrl = getUrl();
-    FeedFetcher fetcher = new HttpURLFeedFetcher();
-    SyndFeed feed = fetcher.retrieveFeed(feedUrl);
-    List<SyndEntry> entries = feed.getEntries();
-    List<String> urls = new ArrayList<>();
-    for (SyndEntry entry : entries) {
-      List<SyndLink> links = entry.getLinks();
-      for (SyndLink link : links) {
-        String href = link.getHref();
-        if (href != null) {
-          urls.add(href);
+  public void search() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
+    Calendar startTime = work.getStartTime();
+    Calendar granuleCutoff = new GregorianCalendar(startTime.getTimeZone());
+    work.dataset.latency.negate().addTo(granuleCutoff);
+    if (granuleCutoff.after(startTime)) {
+      boolean keepSearching = true;
+      while (keepSearching) {
+        URL feedUrl = getUrl();
+        FeedFetcher fetcher = new HttpURLFeedFetcher();
+        SyndFeed feed = fetcher.retrieveFeed(feedUrl);
+        List<SyndEntry> entries = feed.getEntries();
+        if (work.urls == null) {
+          work.urls = new ArrayList<>();
         }
+        int count = 0;
+        for (SyndEntry entry : entries) {
+          count++;
+          List<SyndLink> links = entry.getLinks();
+          for (SyndLink link : links) {
+            String href = link.getHref();
+            if (href != null) {
+              work.urls.add(href);
+            }
+          }
+        }
+        keepSearching = count == numberOfResults;
+        cursor += numberOfResults;
       }
     }
-    return urls;
+    Calendar endTime = work.getEndTime();
+    if (granuleCutoff.after(endTime)) {
+      work.status = Work.CLOSED;
+    }
   }
 
   @Override
@@ -120,19 +124,19 @@ public class Search {
   }
 
   public String getBase() {
-    return base;
+    return config.echoEndpoint;
   }
 
   public String getShortName() {
-    return shortName;
+    return work.dataset.echoShortName;
   }
 
   public String getVersionId() {
-    return versionId;
+    return work.dataset.echoVersionId;
   }
 
   public String getDataCenter() {
-    return dataCenter;
+    return work.dataset.echoDataCenter;
   }
 
   public Envelope getBoundingBox() {
@@ -148,15 +152,15 @@ public class Search {
   }
 
   public Point getPoint() {
-    return point;
+    return new Point(new Position(work.latitude, work.longitude));
   }
 
   public Calendar getStartTime() {
-    return startTime;
+    return work.getStartTime();
   }
 
   public Calendar getEndTime() {
-    return endTime;
+    return work.getEndTime();
   }
 
   public int getCursor() {
@@ -168,7 +172,7 @@ public class Search {
   }
 
   public String getClientId() {
-    return clientId;
+    return config.echoClientId;
   }
 
   public String getSpatialType() {
@@ -177,21 +181,21 @@ public class Search {
 
   private URL getUrl() throws MalformedURLException {
     StringBuilder sb = new StringBuilder();
-    sb.append(base);
-    sb.append(formatQueryParameter("shortName", shortName));
-    sb.append(formatQueryParameter("versionId", versionId));
-    sb.append(formatQueryParameter("dataCenter", dataCenter));
+    sb.append(config.echoEndpoint);
+    sb.append(formatQueryParameter("shortName", work.dataset.echoShortName));
+    sb.append(formatQueryParameter("versionId", work.dataset.echoVersionId));
+    sb.append(formatQueryParameter("dataCenter", work.dataset.echoDataCenter));
     sb.append(formatQueryParameter("boundingBox", boundingBox));
     sb.append(formatQueryParameter("polygon", polygon));
     sb.append(formatQueryParameter("line", line));
-    sb.append(formatQueryParameter("point", point));
-    sb.append(formatQueryParameter("startTime", startTime));
-    sb.append(formatQueryParameter("endTime", endTime));
+    sb.append(formatQueryParameter("point", getPoint()));
+    sb.append(formatQueryParameter("startTime", work.getStartTime()));
+    sb.append(formatQueryParameter("endTime", work.getEndTime()));
     sb.append(formatQueryParameter("cursor", cursor));
     sb.append(formatQueryParameter("numberOfResults", numberOfResults));
-    sb.append(formatQueryParameter("clientId", clientId));
+    sb.append(formatQueryParameter("clientId", config.echoClientId));
     sb.append(formatQueryParameter("spatialType", spatialType));
-    sb.setCharAt(base.length(), '?');
+    sb.setCharAt(config.echoEndpoint.length(), '?');
     return new URL(sb.toString());
   }
 

@@ -5,6 +5,7 @@ import javax.xml.bind.JAXB;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import javax.xml.datatype.Duration;
 
 @XmlType
 public class Dataset {
@@ -25,6 +26,8 @@ public class Dataset {
   public String echoVersionId;
   @XmlElement(name = "dataCenter", namespace = "http://www.echo.nasa.gov/esip")
   public String echoDataCenter;
+  @XmlElement
+  public Duration latency;
 
   @Override
   public String toString() {

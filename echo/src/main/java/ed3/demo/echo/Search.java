@@ -22,7 +22,7 @@ import java.util.List;
 import javax.xml.bind.DatatypeConverter;
 import org.rometools.fetcher.FeedFetcher;
 import org.rometools.fetcher.FetcherException;
-import org.rometools.fetcher.impl.HttpURLFeedFetcher;
+import org.rometools.fetcher.impl.HttpClientFeedFetcher;
 
 public class Search {
 
@@ -91,7 +91,7 @@ public class Search {
       boolean keepSearching = true;
       while (keepSearching) {
         URL feedUrl = getUrl();
-        FeedFetcher fetcher = new HttpURLFeedFetcher();
+        FeedFetcher fetcher = new HttpClientFeedFetcher();
         SyndFeed feed = fetcher.retrieveFeed(feedUrl);
         List<SyndEntry> entries = feed.getEntries();
         if (work.urls == null) {

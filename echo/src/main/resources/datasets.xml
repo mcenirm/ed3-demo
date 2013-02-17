@@ -69,4 +69,11 @@
     <echo:versionId>0</echo:versionId>
     <latency>P2D</latency>
   </dataset>
+  <dataset ed3id='ML2T_NRT'>
+    <title>MLS/Aura Near-Real-Time L2 Temperature V003</title>
+    <echo:dataCenter>GESDISC</echo:dataCenter>
+    <echo:shortName>ML2T_NRT</echo:shortName>
+    <echo:versionId>003</echo:versionId>
+    <latency>PT2H</latency>
+  </dataset>
 </datasets>

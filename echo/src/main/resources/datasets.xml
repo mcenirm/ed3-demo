@@ -71,7 +71,7 @@
   </dataset>
   <dataset ed3id='ML2T_NRT'>
     <title>MLS/Aura Near-Real-Time L2 Temperature V003</title>
-    <echo:dataCenter>GESDISC</echo:dataCenter>
+    <echo:dataCenter>GSFCS4PA</echo:dataCenter>
     <echo:shortName>ML2T_NRT</echo:shortName>
     <echo:versionId>003</echo:versionId>
     <latency>PT2H</latency>

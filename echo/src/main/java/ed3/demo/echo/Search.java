@@ -61,6 +61,7 @@ public class Search {
     System.out.println("-----------------------");
   }
   public WorkConfiguration config;
+  public boolean verbose = false;
   private Work work;
   private Envelope boundingBox;
   private Polygon polygon;
@@ -91,6 +92,9 @@ public class Search {
       boolean keepSearching = true;
       while (keepSearching) {
         URL feedUrl = getUrl();
+        if (verbose) {
+          System.out.println("Searching " + feedUrl);
+        }
         FeedFetcher fetcher = new HttpClientFeedFetcher();
         SyndFeed feed = fetcher.retrieveFeed(feedUrl);
         List<SyndEntry> entries = feed.getEntries();

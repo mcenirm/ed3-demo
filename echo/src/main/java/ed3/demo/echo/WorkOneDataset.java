@@ -27,16 +27,20 @@ public class WorkOneDataset {
     WorkOneDataset w1ds = new WorkOneDataset();
     w1ds.config = new WorkConfiguration();
     Datasets datasets = Datasets.loadDatasets();
-    String datasetId = "MOD02QKM";
+    String datasetId = args.length > 0 ? args[0] : "ML2T_NRT";
     w1ds.dataset = datasets.findDataset(datasetId);
     if (w1ds.dataset == null) {
       System.out.println("could not find dataset \"" + datasetId + "\"");
       return;
     }
+    w1ds.verbose = true;
     w1ds.work();
+    System.out.println("Updated " + w1ds.count + " work" + (w1ds.count == 1 ? "" : "s"));
   }
   public WorkConfiguration config;
   public Dataset dataset;
+  public boolean verbose = false;
+  public int count = 0;
 
   public void work() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     Set<String> seenWork = new TreeSet<>();
@@ -45,11 +49,26 @@ public class WorkOneDataset {
       seenWork.add(work.id);
       if (Work.NEW.equalsIgnoreCase(work.status)) {
         askEcho(work);
-        updateWork(work);
+        int numUrls = work.urls == null ? 0 : work.urls.size();
+        if (Work.CLOSED.equalsIgnoreCase(work.status) || numUrls > 0) {
+          if (verbose) {
+            System.out.println("Updating work " + work.id + " " + work.status + " with " + numUrls + " url" + (numUrls == 1 ? "" : "s"));
+          }
+          updateWork(work);
+          count++;
+        } else {
+          // PASS
+          if (verbose) {
+            System.out.println("Not updating work " + work.id + " " + work.status);
+          }
+        }
       } else if (Work.CLOSED.equalsIgnoreCase(work.status)) {
         // PASS
+        if (verbose) {
+          System.out.println("Skipping " + Work.CLOSED + " work " + work.id);
+        }
       } else {
-        System.out.println(dataset.ed3id + " " + work.id + " " + work.status);
+        System.out.println("Unrecognized status " + work.status + " for " + dataset.ed3id + " " + work.id);
       }
     }
   }
@@ -91,6 +110,7 @@ public class WorkOneDataset {
     Search search = new Search();
     search.config = config;
     search.setWork(work);
+    search.verbose = verbose;
     search.search();
   }
 

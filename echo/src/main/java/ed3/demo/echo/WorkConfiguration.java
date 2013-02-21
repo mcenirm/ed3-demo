@@ -18,7 +18,7 @@ public class WorkConfiguration {
   /**
    * Default ECHO granule search endpoint
    */
-  public static final String DEFAULT_ECHO_ENDPOINT = "https://api.echo.nasa.gov/echo-esip/search/granule.atom";
+  public static final String DEFAULT_ECHO_ENDPOINT = "https://api.echo.nasa.gov:443/opensearch/search/granule.atom";
   /**
    * Default user name (if user.name is not available)
    */

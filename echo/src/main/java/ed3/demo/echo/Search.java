@@ -96,7 +96,13 @@ public class Search {
           System.out.println("Searching " + feedUrl);
         }
         FeedFetcher fetcher = new HttpClientFeedFetcher();
-        SyndFeed feed = fetcher.retrieveFeed(feedUrl);
+        SyndFeed feed = null;
+        try {
+          feed = fetcher.retrieveFeed(feedUrl);
+        } catch (IllegalArgumentException | IOException | FeedException | FetcherException ex) {
+          System.err.println("Failed to fetch ECHO: " + feedUrl);
+          throw ex;
+        }
         List<SyndEntry> entries = feed.getEntries();
         if (work.urls == null) {
           work.urls = new ArrayList<>();

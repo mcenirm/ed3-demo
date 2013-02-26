@@ -74,4 +74,16 @@ public class Work {
   public Calendar getEndTime() {
     return x(temporal_post);
   }
+
+  public boolean isClosed() {
+    return CLOSED.equalsIgnoreCase(status);
+  }
+
+  public boolean isNew() {
+    return NEW.equalsIgnoreCase(status);
+  }
+
+  public boolean isTrouble() {
+    return TROUBLE.equalsIgnoreCase(status);
+  }
 }

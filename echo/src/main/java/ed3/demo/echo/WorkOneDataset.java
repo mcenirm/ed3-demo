@@ -40,7 +40,9 @@ public class WorkOneDataset {
   public WorkConfiguration config;
   public Dataset dataset;
   public boolean verbose = false;
-  public int countUpdated = 0;
+  public int countUpdatedClosed = 0;
+  public int countUpdatedNew = 0;
+  public int countUpdatedTrouble = 0;
   public int countNotUpdated = 0;
   public int countSkippedClosed = 0;
   public int countSkippedTrouble = 0;
@@ -111,17 +113,23 @@ public class WorkOneDataset {
       throw ex;
     }
     int numUrls = work.urls == null ? 0 : work.urls.size();
-    if (Work.CLOSED.equalsIgnoreCase(work.status) || numUrls > 0) {
-      if (verbose) {
-        System.out.println("Updating work " + work.id + " " + work.status + " with " + numUrls + " url" + (numUrls == 1 ? "" : "s"));
-      }
-      updateWork(work);
-      countUpdated++;
-    } else {
+    if (numUrls == 0 && work.isNew()) {
       if (verbose) {
         System.out.println("Not updating work " + work.id + " " + work.status);
       }
       countNotUpdated++;
+    } else {
+      if (verbose) {
+        System.out.println("Updating work " + work.id + " " + work.status + " with " + numUrls + " url" + (numUrls == 1 ? "" : "s"));
+      }
+      updateWork(work);
+      if (work.isClosed()) {
+        countUpdatedClosed++;
+      } else if (work.isNew()) {
+        countUpdatedNew++;
+      } else if (work.isTrouble()) {
+        countUpdatedTrouble++;
+      }
     }
   }
 
@@ -164,10 +172,12 @@ public class WorkOneDataset {
   }
 
   public void printStatistics() {
-    System.out.println("Updated " + countUpdated + " " + Work.pluralize(countUpdated));
+    System.out.println("Updated " + Work.CLOSED + " " + countUpdatedClosed + " " + Work.pluralize(countUpdatedClosed));
+    System.out.println("Updated " + Work.NEW + " " + countUpdatedNew + " " + Work.pluralize(countUpdatedNew));
+    System.out.println("Updated " + Work.TROUBLE + " " + countUpdatedTrouble + " " + Work.pluralize(countUpdatedTrouble));
     System.out.println("Not updated " + countNotUpdated + " " + Work.pluralize(countNotUpdated));
-    System.out.println("Skipped closed " + countSkippedClosed + " " + Work.pluralize(countSkippedClosed));
-    System.out.println("Skipped trouble " + countSkippedTrouble + " " + Work.pluralize(countSkippedTrouble));
+    System.out.println("Skipped " + Work.CLOSED + " " + countSkippedClosed + " " + Work.pluralize(countSkippedClosed));
+    System.out.println("Skipped " + Work.TROUBLE + " " + countSkippedTrouble + " " + Work.pluralize(countSkippedTrouble));
     System.out.println("Unrecognized status " + countUnrecognizedStatus + " " + Work.pluralize(countUnrecognizedStatus));
   }
 }

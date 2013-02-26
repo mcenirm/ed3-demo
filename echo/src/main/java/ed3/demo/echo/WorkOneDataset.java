@@ -35,12 +35,15 @@ public class WorkOneDataset {
     }
     w1ds.verbose = true;
     w1ds.work();
-    System.out.println("Updated " + w1ds.count + " work" + (w1ds.count == 1 ? "" : "s"));
+    w1ds.printStatistics();
   }
   public WorkConfiguration config;
   public Dataset dataset;
   public boolean verbose = false;
-  public int count = 0;
+  public int countUpdated = 0;
+  public int countNotUpdated = 0;
+  public int countSkippedClosed = 0;
+  public int countUnrecognizedStatus = 0;
 
   public void work() throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
     Set<String> seenWork = new TreeSet<>();
@@ -48,27 +51,33 @@ public class WorkOneDataset {
     while ((work = fetchWork()) != null && !seenWork.contains(work.id)) {
       seenWork.add(work.id);
       if (Work.NEW.equalsIgnoreCase(work.status)) {
-        askEcho(work);
+        try {
+          askEcho(work);
+        } catch (IllegalArgumentException | IOException | FeedException | FetcherException ex) {
+          printStatistics();
+          throw ex;
+        }
         int numUrls = work.urls == null ? 0 : work.urls.size();
         if (Work.CLOSED.equalsIgnoreCase(work.status) || numUrls > 0) {
           if (verbose) {
             System.out.println("Updating work " + work.id + " " + work.status + " with " + numUrls + " url" + (numUrls == 1 ? "" : "s"));
           }
           updateWork(work);
-          count++;
+          countUpdated++;
         } else {
-          // PASS
           if (verbose) {
             System.out.println("Not updating work " + work.id + " " + work.status);
           }
+          countNotUpdated++;
         }
       } else if (Work.CLOSED.equalsIgnoreCase(work.status)) {
-        // PASS
         if (verbose) {
           System.out.println("Skipping " + Work.CLOSED + " work " + work.id);
         }
+        countSkippedClosed++;
       } else {
         System.out.println("Unrecognized status " + work.status + " for " + dataset.ed3id + " " + work.id);
+        countUnrecognizedStatus++;
       }
     }
   }
@@ -106,12 +115,17 @@ public class WorkOneDataset {
     }
   }
 
-  public void askEcho(Work work) throws MalformedURLException, IllegalArgumentException, IOException, FeedException, FetcherException {
+  public void askEcho(Work work) throws IllegalArgumentException, IOException, FeedException, FetcherException {
     Search search = new Search();
     search.config = config;
     search.setWork(work);
     search.verbose = verbose;
-    search.search();
+    try {
+      search.search();
+    } catch (IOException | IllegalArgumentException | FeedException | FetcherException ex) {
+      System.out.println("Failed to search ECHO for " + work);
+      throw ex;
+    }
   }
 
   public void updateWork(Work work) {
@@ -137,5 +151,12 @@ public class WorkOneDataset {
       System.out.println(message);
       System.out.println("-----------------------");
     }
+  }
+
+  public void printStatistics() {
+    System.out.println("Updated " + countUpdated + " " + Work.pluralize(countUpdated));
+    System.out.println("Not updated " + countNotUpdated + " " + Work.pluralize(countNotUpdated));
+    System.out.println("Skipped closed " + countSkippedClosed + " " + Work.pluralize(countSkippedClosed));
+    System.out.println("Unrecognized status " + countUnrecognizedStatus + " " + Work.pluralize(countUnrecognizedStatus));
   }
 }

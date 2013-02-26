@@ -13,6 +13,16 @@ public class Work {
 
   public final static String CLOSED = "CLOSED";
   public final static String NEW = "NEW";
+
+  /**
+   * Provide proper plural form of "work"
+   *
+   * @param number number of works
+   * @return "work" or "works"
+   */
+  public static String pluralize(int number) {
+    return "work" + (number == 1 || number == -1 ? "" : "s");
+  }
   public String id;
   public Dataset dataset;
   public double latitude;

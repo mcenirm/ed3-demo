@@ -13,6 +13,7 @@ public class Work {
 
   public final static String CLOSED = "CLOSED";
   public final static String NEW = "NEW";
+  public final static String TROUBLE = "TROUBLE";
 
   /**
    * Provide proper plural form of "work"

@@ -98,7 +98,20 @@ public class Search {
         FeedFetcher fetcher = new HttpClientFeedFetcher();
         SyndFeed feed = null;
         try {
-          feed = fetcher.retrieveFeed(feedUrl);
+          try {
+            feed = fetcher.retrieveFeed(feedUrl);
+          } catch (FetcherException ex) {
+            int responseCode = ex.getResponseCode();
+            if (responseCode == 404) {
+              if (verbose) {
+                System.out.println("ECHO return 404 for " + feedUrl);
+              }
+              work.status = Work.TROUBLE;
+              return;
+            } else {
+              throw ex;
+            }
+          }
         } catch (IllegalArgumentException | IOException | FeedException | FetcherException ex) {
           System.err.println("Failed to fetch ECHO: " + feedUrl);
           throw ex;

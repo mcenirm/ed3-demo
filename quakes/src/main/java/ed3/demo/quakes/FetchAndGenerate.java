@@ -10,6 +10,7 @@ import static ed3.demo.quakes.SAMECodes.SAME;
 import ed3.demo.util.FeedFetching;
 import ed3.demo.util.Misc;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
@@ -20,6 +21,7 @@ import javax.ws.rs.client.ClientFactory;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.StatusType;
 import javax.xml.bind.JAXB;
@@ -46,7 +48,7 @@ public class FetchAndGenerate {
       alert.setMsgType("Alert");
       alert.setScope("Public");
       alert.setInfoCategory("Geo");
-      alert.setInfoEvent("Earthquake");
+      alert.setInfoEvent("earthquake");
       alert.setInfoUrgency("Past");
       alert.setInfoSeverity("Minor");
       alert.setInfoCertainty("Observed");
@@ -73,16 +75,29 @@ public class FetchAndGenerate {
       Builder request = target.request();
       Entity<Alert> entity = Entity.entity(alert, APPLICATION_CAP_XML);
       Response response = request.post(entity);
-      (new PrintWriter(responseFile)).println(response.toString());
       final int status = response.getStatus();
       final StatusType statusInfo = response.getStatusInfo();
       final String message = response.readEntity(String.class);
+      saveResponse(response, message, responseFile);
       response.close();
-      if (status != 200) {
-        System.out.println(status);
-        System.out.println(statusInfo);
+      if (status != 200 || !"success".equalsIgnoreCase(message)) {
+        System.out.println(substring + " " + alert.getIdentifier());
+        System.out.println(status + " " + statusInfo);
         System.out.println(message);
+        System.out.println("---------------------");
       }
+    }
+  }
+
+  static void saveResponse(Response response, String message, File responseFile) throws FileNotFoundException {
+    try (PrintWriter out = new PrintWriter(responseFile)) {
+      int status = response.getStatus();
+      StatusType statusInfo = response.getStatusInfo();
+      out.println(status + " " + statusInfo);
+      MultivaluedMap<String, Object> headers = response.getHeaders();
+      out.println(headers);
+      out.println();
+      out.println(message);
     }
   }
 }

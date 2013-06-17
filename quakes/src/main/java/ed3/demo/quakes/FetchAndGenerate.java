@@ -80,7 +80,7 @@ public class FetchAndGenerate {
       final String message = response.readEntity(String.class);
       saveResponse(response, message, responseFile);
       response.close();
-      if (status != 200 || !"success".equalsIgnoreCase(message)) {
+      if (status != 200 || !("success".equalsIgnoreCase(message) || "error - no matching subscriptions".equalsIgnoreCase(message))) {
         System.out.println(substring + " " + alert.getIdentifier());
         System.out.println(status + " " + statusInfo);
         System.out.println(message);

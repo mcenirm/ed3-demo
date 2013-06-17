@@ -59,7 +59,7 @@ public class FetchAndGenerate {
           String name = category.getName();
           try {
             Float.parseFloat(name);
-            alert.addInfoParameter("Magnitude", name);
+            alert.addInfoParameter("magnitude", name);
             break;
           } catch (NullPointerException | NumberFormatException e) {
             // PASS

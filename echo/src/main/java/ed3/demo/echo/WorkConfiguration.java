@@ -18,15 +18,15 @@ public class WorkConfiguration {
   /**
    * Default ECHO granule search endpoint
    */
-  public static final String DEFAULT_ECHO_ENDPOINT = "https://api.echo.nasa.gov:443/opensearch/granule.atom";
+  public static final String DEFAULT_ECHO_ENDPOINT = "https://api.echo.nasa.gov:443/opensearch/granules.atom";
   /**
    * Default user name (if user.name is not available)
    */
-  public static final String DEFAULT_USER_NAME = "mmceniry";
+  public static final String DEFAULT_USER_NAME = "ed3-echo-client";
   /**
    * Default email address domain
    */
-  public static final String DEFAULT_USER_DOMAIN = "itsc.uah.edu";
+  public static final String DEFAULT_USER_DOMAIN = "itsc-uah-edu";
   /**
    * ED3 workflow services endpoint
    */
@@ -52,12 +52,15 @@ public class WorkConfiguration {
    * @see #DEFAULT_USER_DOMAIN
    */
   public WorkConfiguration() {
-    this.workflowEndpoint = DEFAULT_WORKFLOW_ENDPOINT;
-    this.echoEndpoint = DEFAULT_ECHO_ENDPOINT;
-    String userName = System.getProperty("user.name", DEFAULT_USER_NAME);
-    if ("_".equals(userName)) {
-      userName = DEFAULT_USER_NAME;
+    this.workflowEndpoint = System.getProperty("ed3.wf", DEFAULT_WORKFLOW_ENDPOINT);
+    this.echoEndpoint = System.getProperty("ed3.echo.granules.url", DEFAULT_ECHO_ENDPOINT);
+    this.echoClientId = System.getProperty("ed3.echo.client.id");
+    if (this.echoClientId == null) {
+      String userName = System.getProperty("user.name", DEFAULT_USER_NAME);
+      if ("_".equals(userName)) {
+        userName = DEFAULT_USER_NAME;
+      }
+      this.echoClientId = userName + "-" + DEFAULT_USER_DOMAIN;
     }
-    this.echoClientId = userName + "@" + DEFAULT_USER_DOMAIN;
   }
 }

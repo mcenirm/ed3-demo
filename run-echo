@@ -4,8 +4,25 @@ set -e
 
 cd $HOME/ed3/ed3-demo/echo/
 
-#LOGGING=-Djava.util.logging.config.file=../logging.properties
+CLASS=ed3.demo.echo.WorkAllDatasets
 LOGGING=
 
-$HOME/sw/jdk/bin/java ${LOGGING} -cp target/dependency/\*:target/ed3-demo-echo-1.0-SNAPSHOT.jar ed3.demo.echo.WorkAllDatasets
+function Usage () {
+  cat >&2 <<EOF
+Usage: $0 [OPTIONS]
+Options:
+  --test  run a single dataset (ML2T_NRT)
+  --log   use logging.properties file
+EOF
+}
+
+while [[ $# -gt 0 ]] ; do
+  case "$1" in
+    --test) shift ; CLASS=ed3.demo.echo.WorkOneDataset ;;
+    --log) shift ; LOGGING=-Djava.util.logging.config.file=../logging.properties ;;
+    *) Usage ; exit 1 ;;
+  esac
+done
+
+$HOME/sw/jdk/bin/java ${LOGGING} -cp target/dependency/\*:target/ed3-demo-echo-1.0-SNAPSHOT.jar ${CLASS}
 

@@ -31,7 +31,7 @@ import org.rometools.fetcher.FetcherException;
 public class FetchAndGenerate {
 
   public static final String CAP_CONSUMER_LOCATION = "http://ed3test.itsc.uah.edu/ed3/events/new.php";
-  public static final String FEED_LOCATION = "http://earthquake.usgs.gov/earthquakes/feed/atom/1.0/hour";
+  public static final String FEED_LOCATION = "http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_hour.atom";
 
   public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FetcherException, FeedException {
     FeedFetcher fetcher = FeedFetching.newCachingFeedFetcher();

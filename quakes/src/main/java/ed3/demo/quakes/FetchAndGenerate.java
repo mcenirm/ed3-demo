@@ -16,6 +16,8 @@ import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientFactory;
 import javax.ws.rs.client.Entity;
@@ -34,6 +36,7 @@ public class FetchAndGenerate {
   public static final String FEED_LOCATION = "http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_hour.atom";
 
   public static void main(String[] args) throws MalformedURLException, IllegalArgumentException, IOException, FetcherException, FeedException {
+    Pattern magnitudePattern = Pattern.compile("M\\s*(\\d+\\.\\d+)");
     FeedFetcher fetcher = FeedFetching.newCachingFeedFetcher();
     SyndFeed feed = fetcher.retrieveFeed(new URL(FEED_LOCATION));
     List<SyndEntry> entries = feed.getEntries();
@@ -53,18 +56,11 @@ public class FetchAndGenerate {
       alert.setInfoSeverity("Minor");
       alert.setInfoCertainty("Observed");
       alert.setInfoEventCode(SAME, EARTHQUAKE_WARNING);
-      List<SyndCategory> categories = entry.getCategories();
-      for (SyndCategory category : categories) {
-        if (category.getTaxonomyUri() == null) {
-          String name = category.getName();
-          try {
-            Float.parseFloat(name);
-            alert.addInfoParameter("magnitude", name);
-            break;
-          } catch (NullPointerException | NumberFormatException e) {
-            // PASS
-          }
-        }
+      String title = entry.getTitle();
+      Matcher magnitudeMatcher = magnitudePattern.matcher(title);
+      if (magnitudeMatcher.find()) {
+        String possibleMagnitude = magnitudeMatcher.group(1);
+        alert.addInfoParameter("magnitude", possibleMagnitude);
       }
       String link = alert.getInfo().getWeb();
       int lastIndexOf = link.lastIndexOf('/');
